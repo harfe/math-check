@@ -1,0 +1,1484 @@
+#### start preamble
+
+# the following is already hardcoded:
+# $var -> pred pairs bool bool
+
+# we defined some very important variables
+$var true bool
+$var false bool
+$var in pred pairs set set
+
+## some boolean logic:
+
+# axiom: true is always true
+$asm axiom-true true
+
+# axiom that bool functions only need to be shown for true, false
+$asm axiom-forall-bool . ! pred bool \ f pred bool
+                 . -> : . f false
+                 . -> : . f true
+                 . ! bool f
+
+# we define some logical functions
+$def not \ x bool . -> : x false
+$def and \ x pairs bool bool . not . -> : fst x . not snd x
+$def or \ x pairs bool bool . -> : . not fst x snd x
+$def iff \ x pairs bool bool . and : . -> x . -> : snd x fst x
+
+# some useful definitions:
+
+# define existence for sets
+$def exists \ f pred set
+  . not . ! set \ x set . not . f x
+
+# define set equality
+$def eq \ xy pairs set set
+    . ! set \ z set
+    . iff : . in : z fst xy 
+    . in : z snd xy
+
+# define subset
+$def subset \ xy pairs set set
+  . ! set \ z set
+  . -> : . in : z fst xy 
+  . in : z snd xy
+
+# define property of empty set
+$def isempty \ x set
+  . ! set \ y set
+  . not . in : y x
+
+$def nonempty \ x set
+  . not . isempty x
+
+# define disjoint
+$def disjoint \ x pairs set set
+  . ! set \ y set
+  . -> : . and :
+    . subset : y fst x
+    . subset : y snd x
+  . isempty y
+
+# define unique existence
+$def exists_uniq \ f pred set
+  . and : . exists f
+  . ! pairs set set \ xy pairs set set
+  . -> : . and : . f fst xy . f snd xy
+  . eq xy
+
+
+# list of ZFC axioms
+
+# axiom of extensionality
+$def axiom-ext . ! pairs set set \ xy pairs set set 
+  . -> : . eq xy
+  . ! set \ z set . iff : 
+  . in : fst xy z
+  . in : snd xy z
+
+# axiom schema of specification
+$def axiom-spec . ! pred set \ f pred set
+  . ! set \ x set . exists \ y set
+  . ! set \ z set . iff :
+  . in : z y
+  . and : . in : z x . f z
+
+# axiom of pairing
+$def axiom-pairing . ! pairs set set \ xy pairs set set
+  . exists \ z set
+  . and : . in : z fst xy
+  . in : z snd xy
+
+# axiom of union
+$def axiom-union . ! set \ xx set
+  . exists \ u set
+  . ! pairs set set \ xy pairs set set
+  . -> : . and : . in xy . in : snd xy xx
+  . in : fst xy u
+
+# axiom of power set
+$def axiom-powerset . ! set \ x set
+  . exists \ p set
+  . ! set \ y set
+  . -> : . subset : y x
+  . in : y p
+
+# axiom of infinity
+$def axiom-infinity . exists \ xx set . and : 
+  . exists \ x set 
+    . and : . in : x xx . isempty x
+  . ! set \ x set
+    . -> : . in : x xx
+    . exists \ y set
+    . and : . in : y xx
+    . ! set \ z set
+    . iff : . in : z y
+    . or : . eq : z x
+    . in : z x
+#     . and : . in : x y
+#     . subset : x y
+
+# axiom of regularity
+$def axiom-regularity . ! set \ x set
+  . or : . isempty x
+  . exists \ y set
+  . and : . in : y x
+  . disjoint : y x
+
+# axiom of replacement
+$def axiom-replace . ! set \ a set 
+  . ! pred pairs set set \ f pred pairs set set
+  . -> : . ! set \ x set
+    . -> : . in : x a
+    . exists_uniq \ y set . f : x y # f is a function
+  . exists \ b set . ! set \ x set # b is a superset of image
+  . -> : . in : x a
+  . exists \ y set 
+  . and : . in : y b . f : x y
+
+# axiom of choice: every collection of disjoint nonempty sets
+# has a choice set
+$def axiom-choice . ! set \ a set
+  . -> : 
+    . and : . nonempty a
+      . and : . ! set \ b set
+        . -> : . in : b a . nonempty b
+      . ! pairs set set \ xy pairs set set
+        . -> : . and : 
+          . not . eq xy 
+          . and : . in : fst xy a
+          . in : snd xy a
+        . disjoint xy
+  . exists \ d set . ! set \ b set # d is the choice set
+    . -> : . in : b a
+    . exists_uniq \ c set
+    . and : . in : c b
+    . in : c d
+
+# collect the axioms as zfc
+$def zfc-axiom-collection . and : axiom-ext
+  . and : axiom-spec
+  . and : axiom-pairing
+  . and : axiom-union
+  . and : axiom-powerset
+  . and : axiom-infinity
+  . and : axiom-regularity
+  . and : axiom-replace
+  axiom-choice
+  
+## main assumption:
+$asm zfc-axioms zfc-axiom-collection
+
+### end preamble
+
+#### contradiction challenge: 
+## keep the file unchanged until here and uncomment the following line:
+# $prove false
+##
+## then end the file somehow, and the file has to be accepted
+### end contradiction challenge
+
+# an abbreviation for scoping
+$thm end-scope axiom-true
+
+# some abbreviations
+$thm fab axiom-forall-bool
+$thm ax-t axiom-true
+
+
+# calculate some values for logical functions
+$thm imp-tt $prove . -> : true true
+  $asm _1 true
+  _1
+$thm imp-ft $prove . -> : false true
+  $asm _1 false
+  ax-t
+$thm imp-ff $prove . -> : false false
+  $asm _1 false
+  _1
+
+$thm imp-tf $prove . not . -> : true false
+  $asm _1 . -> : true false
+  $mp _1 ax-t
+
+# false implies everything
+$thm imp-fx $prove . ! bool \ x bool . -> : false x
+  $thm _1 $spec fab \ x bool . -> : false x
+  $thm _2 $prove 
+    . -> : . -> : false false
+      . -> : . -> : false true
+      . ! bool \ x bool . -> : false x
+    _1
+  $thm _3 $mp $mp _2 imp-ff imp-ft
+  _3
+
+$thm not-f $prove . not false
+  imp-ff
+
+$thm not-t $prove . not . not true
+  imp-tf
+
+
+# double negation
+$thm imp-x-nnx $prove . ! bool \ x bool . -> : x . not . not x
+  $def f \ x bool . -> : x . not . not x
+  $thm _1 $prove . -> : . f false . -> : . f true . ! bool f
+    $spec fab f
+  $thm _2 $prove . -> : false . not . not false
+    $spec imp-fx . not . not false
+  $thm _3 $prove . -> : true . not . not true
+    $asm _4 true
+    not-t
+  $thm _5 $prove . f false _2
+  $thm _6 $prove . ! bool f $mp $mp _1 _5 _3
+  _6
+
+# x implies x
+$thm imp-xx $prove . ! bool \ x bool . -> : x x
+  $thm _1 $spec fab \ x bool . -> : x x
+  $thm _2 $prove 
+    . -> : . -> : false false
+      . -> : . -> : true true
+      . ! bool \ x bool . -> : x x
+    _1
+  $thm _3 $mp $mp _2 imp-ff imp-tt
+  _3 
+
+# x implies true
+$thm imp-xt $prove . ! bool \ x bool . -> : x true
+  $var x bool
+  $asm _1 x
+  ax-t
+
+
+
+$thm and-tt $prove . and : true true
+  $thm _1 $prove . -> : . -> : true . not true false
+    $asm _2 . -> : true . not true
+    $thm _3 $prove . not true
+      $mp _2 ax-t
+    $thm _5 $prove . -> : . -> : true false false imp-tf
+    $thm _4 $prove false $mp _5 _3
+    _4
+  _1
+
+
+$thm and-ft $prove . not . and : false true
+  $thm _1 $prove . not . not . -> : false . not true
+    $def x . -> : false . not true
+    $thm _2 $prove x $spec imp-fx . not true
+    $thm _3 $prove . -> : x . not . not x
+      $spec imp-x-nnx x
+    $mp _3 _2
+  _1
+
+$thm and-tf $prove . not . and : true false
+  $thm _1 $prove . not . not . -> : true . not false
+    $asm _2 . -> : . -> : true . not false false
+    $thm _3 $prove . -> : true . not false
+      $asm _4 true not-f
+    $thm _4 $mp _2 _3
+    _4
+  _1
+
+$thm and-ff $prove . not . and : false false
+  $thm _1 $prove . not . not . -> : false . not false
+    $asm _2 . -> : . -> : false . not false false
+    $thm _3 $prove . -> : false . not false 
+      $asm _4 false not-f
+    $thm _4 $mp _2 _3
+    _4
+  _1
+
+$thm and-xf $prove . ! bool \ x bool . not . and : false x
+  $def f \ x bool . not . and : false x
+  $thm _1 $prove . -> : . f false . -> : . f true . ! bool f
+    $spec fab f
+  $thm _2 $prove . f false and-ff
+  $thm _3 $prove . f true and-ft
+  $thm _4 $mp $mp _1 _2 _3
+  _4
+
+$thm and-fx $prove . ! bool \ x bool . not . and : x false
+  $def f \ x bool . not . and : x false
+  $thm _1 $prove . -> : . f false . -> : . f true . ! bool f
+    $spec fab f
+  $thm _2 $prove . f false and-ff
+  $thm _3 $prove . f true and-tf
+  $thm _4 $mp $mp _1 _2 _3
+  _4
+
+# get a component from and
+$thm and-fst $prove 
+      . ! pairs bool bool \ xy pairs bool bool
+      . -> : . and xy fst xy
+  $var xy pairs bool bool
+  $def f \ z bool . -> : . and : z snd xy z
+  $thm _1 $prove . -> : . f false . -> : . f true . ! bool f
+    $spec fab f
+  $thm _2 $prove . f false
+    $spec and-xf snd xy
+  $thm _3 $prove . f true
+    $asm _4 . and : true snd xy
+    ax-t
+  $thm _4 $prove . ! bool f $mp $mp _1 _2 _3
+  $thm _5 $spec _4 fst xy
+  _5
+
+$thm and-snd $prove
+      . ! pairs bool bool \ xy pairs bool bool
+      . -> : . and xy snd xy
+  $var xy pairs bool bool
+  $def f \ z bool . -> : . and : fst xy z z
+  $thm _1 $prove . -> : . f false . -> : . f true . ! bool f
+    $spec fab f
+  $thm _2 $prove . f false
+    $spec and-fx fst xy
+  $thm _3 $prove . f true
+    $asm _4 . and : fst xy true
+    ax-t
+  $thm _4 $prove . ! bool f $mp $mp _1 _2 _3
+  $thm _5 $spec _4 snd xy
+  _5
+
+$thm impimp-and $prove
+      . ! pairs bool bool \ xy pairs bool bool
+      . -> : fst xy
+      . -> : snd xy . and : fst xy snd xy
+  $var xy pairs bool bool
+  $def x fst xy
+  $def y snd xy
+  $asm _1 x
+  $asm _2 y
+  $thm _3 $prove . and : x y
+    $asm _4 . -> : x . not y
+    $thm _5 $prove . -> : y false $mp _4 _1
+    $thm _6 $prove false  $mp _5 _2
+    _6
+  _3
+    
+$thm iff-imp $prove
+      . ! pairs bool bool \ xy pairs bool bool
+      . -> : . iff xy
+      . -> xy
+  $var xy pairs bool bool
+  $asm _1 . iff xy
+  $def i1 : . -> xy . -> : snd xy fst xy
+  $thm _2 $prove . and i1 _1
+  $thm _3 $prove . -> : . and i1 fst i1 
+    $spec and-fst i1
+  $thm _4 $prove fst i1 $mp _3 _2
+  _4
+
+$thm not-iff-1 $prove
+      . ! pairs bool bool \ xy pairs bool bool
+      . -> : . not fst xy
+      . -> xy
+  $var xy pairs bool bool
+  $asm _1 . not fst xy
+  $thm _3 $prove . -> xy
+    $asm _4 fst xy
+    $thm _5 $prove false 
+      $mp $prove . -> : fst xy false _1 _4
+    $thm _6 $prove false 
+      $mp $prove . -> : fst xy false _1 _4
+    $thm _7 $prove snd xy
+      $mp $prove . -> : false snd xy $spec imp-fx snd xy _6
+    _7
+  _3
+
+$thm imp-nxny-iff-xy $prove
+      . ! pairs bool bool \ xy pairs bool bool
+      . -> : . not fst xy
+      . -> : . not snd xy
+      . iff xy
+  $var xy pairs bool bool
+  $asm _1 . not fst xy
+  $asm _2 . not snd xy
+  $thm _3 $prove . -> xy
+    $mp $prove . -> : . not fst xy . -> xy
+    $spec not-iff-1 xy _1
+  $def a2 . -> : snd xy fst xy
+  $thm _4 $prove a2
+    $mp $prove . -> : . not snd xy . -> : snd xy fst xy
+    $spec not-iff-1 : snd xy fst xy _2
+  $def p1 : . -> xy a2
+  $thm _5 $prove . -> : fst p1 . -> : a2 . and : fst p1 a2
+    $spec impimp-and p1
+  $thm _6 $prove . and : fst p1 a2
+    $mp $mp _5 _3 _4
+  $thm _7 $prove . iff xy _6
+  _7
+
+$thm iff-sym $prove
+      . ! pairs bool bool \ xy pairs bool bool
+      . -> : . iff : snd xy fst xy . iff xy
+  $var xy pairs bool bool
+  $def x fst xy
+  $def y snd xy
+  $def i1 . -> xy
+  $def i2 . -> : y x
+  $asm _1 . iff : y x
+  $thm _2 $prove . and : i2 i1 _1
+  $thm _3 $prove . -> : . and : i2 i1 i2
+    $spec and-fst : i2 i1
+  $thm _4 $prove . -> : . and : i2 i1 i1
+    $spec and-snd : i2 i1
+  $thm _5 $prove i2 $mp _3 _2
+  $thm _6 $prove i1 $mp _4 _2
+  $thm _7 $prove . -> : i1 . -> : i2 . and : i1 i2
+    $spec impimp-and : i1 i2
+  $thm _8 $prove . and : i1 i2
+    $mp $mp _7 _6 _5
+  _8
+
+
+$thm iff-trans $prove
+      . ! pairs pairs bool bool bool 
+          \ xyz pairs pairs bool bool bool
+      . -> : . iff fst xyz
+      . -> : . iff : snd fst xyz snd xyz
+      . iff : fst fst xyz snd xyz
+  $var xyz pairs pairs bool bool bool
+  $def x fst fst xyz
+  $def y snd fst xyz
+  $def z snd xyz
+  $asm _1 . iff : x y
+  $asm _2 . iff : y z
+  $def ixy . -> : x y
+  $def iyx . -> : y x
+  $def ixz . -> : x z
+  $def izx . -> : z x
+  $def iyz . -> : y z
+  $def izy . -> : z y
+  $thm ixy_1 $prove . -> : . and : ixy iyx ixy
+    $spec and-fst : ixy iyx
+  $thm ixy_2 $prove ixy $mp ixy_1 _1
+  $thm iyx_1 $prove . -> : . and : ixy iyx iyx
+    $spec and-snd : ixy iyx
+  $thm iyx_2 $prove iyx $mp iyx_1 _1
+  $thm iyz_1 $prove . -> : . and : iyz izy iyz
+    $spec and-fst : iyz izy
+  $thm iyz_2 $prove iyz $mp iyz_1 _2
+  $thm izy_1 $prove . -> : . and : iyz izy izy
+    $spec and-snd : iyz izy
+  $thm izy_2 $prove izy $mp izy_1 _2
+  $thm ixz_1 $prove ixz
+    $asm _3 x
+    $thm _4 $prove y
+      $mp $prove . -> : x y ixy_2 _3
+    $thm _5 $prove z
+      $mp $prove . -> : y z iyz_2 _4
+    _5
+  $thm izx_1 $prove izx
+    $asm _3 z
+    $thm _4 $prove y
+      $mp $prove . -> : z y izy_2 _3
+    $thm _5 $prove x
+      $mp $prove . -> : y x iyx_2 _4
+    _5
+  $thm _3 $prove . -> : ixz . -> : izx . and : ixz izx
+    $spec impimp-and : ixz izx
+  $thm _4 $prove . and : ixz izx
+    $mp $mp _3 ixz_1 izx_1
+  $prove . iff : x z _4
+    
+
+$thm iff-trans-2 $prove
+  . ! pairs pairs bool bool bool 
+      \ xyz pairs pairs bool bool bool
+  . -> : . iff : fst fst xyz snd xyz
+  . -> : . iff : snd fst xyz snd xyz
+  . iff fst xyz
+  $var xyz pairs pairs bool bool bool
+  $def x fst fst xyz
+  $def y snd fst xyz
+  $def z snd xyz
+  $asm _1 . iff : x z
+  $asm _2 . iff : y z
+  $thm _3 $prove . -> : . iff : y z . iff : z y
+    $spec iff-sym : z y
+  $thm _4 $prove . iff : z y
+    $mp _3 _2
+  $thm _5 $prove
+      . -> : . iff : x z . -> : . iff : z y . iff : x y
+    $spec iff-trans : : x z y
+  $thm _6 $prove . iff : x y
+    $mp $mp _5 _1 _4
+  _6
+
+$thm iff-imp-2 $prove
+      . ! pairs bool bool \ xy pairs bool bool
+      . -> : . iff xy
+      . -> : snd xy fst xy
+  $var xy pairs bool bool
+  $def x fst xy
+  $def y snd xy
+  $asm _1 . iff xy
+  $thm _2 $prove . -> : . iff xy . -> : y x
+    $spec and-snd : . -> xy . -> : y x
+  $mp _2 _1
+
+$thm impimp-iff $prove
+      . ! pairs bool bool \ xy pairs bool bool
+      . -> : . -> xy
+      . -> : . -> : snd xy fst xy
+      . iff xy
+  $var xy pairs bool bool
+  $def x fst xy
+  $def y snd xy
+  $def i1 . -> : x y
+  $def i2 . -> : y x
+  $asm _1 i1
+  $asm _2 i2
+  $thm _3 $prove . -> : i1 . -> : i2 . and : i1 i2
+    $spec impimp-and : i1 i2
+  $mp $mp _3 _1 _2
+
+
+
+# extract axioms from zfc
+$thm ax-ext $prove axiom-ext
+  $def _z8 . and : axiom-replace axiom-choice
+  $def _z7 . and : axiom-regularity _z8
+  $def _z6 . and : axiom-infinity _z7
+  $def _z5 . and : axiom-powerset _z6
+  $def _z4 . and : axiom-union _z5
+  $def _z3 . and : axiom-pairing _z4
+  $def _z2 . and : axiom-spec _z3
+  $thm _1 $prove . -> : zfc-axiom-collection axiom-ext
+    $spec and-fst : axiom-ext _z2
+  $mp _1 zfc-axioms
+
+$thm ax-spec $prove 
+      . ! pred set \ f pred set
+      . ! set \ x set . exists \ y set
+      . ! set \ z set . iff :
+      . in : z y
+      . and : . in : z x . f z
+  $def _z8 . and : axiom-replace axiom-choice
+  $def _z7 . and : axiom-regularity _z8
+  $def _z6 . and : axiom-infinity _z7
+  $def _z5 . and : axiom-powerset _z6
+  $def _z4 . and : axiom-union _z5
+  $def _z3 . and : axiom-pairing _z4
+  $def _z2 . and : axiom-spec _z3
+  $thm i1 $prove . -> : zfc-axiom-collection _z2
+    $spec and-snd : axiom-ext _z2
+  $thm _2 $prove _z2
+    $mp i1 zfc-axioms
+  $thm i2 $prove . -> : _z2 axiom-spec
+    $spec and-fst : axiom-spec _z3
+  $mp i2 _2
+
+$thm ax-pair $prove axiom-pairing
+  $def _z8 . and : axiom-replace axiom-choice
+  $def _z7 . and : axiom-regularity _z8
+  $def _z6 . and : axiom-infinity _z7
+  $def _z5 . and : axiom-powerset _z6
+  $def _z4 . and : axiom-union _z5
+  $def _z3 . and : axiom-pairing _z4
+  $def _z2 . and : axiom-spec _z3
+  $thm i1 $prove . -> : zfc-axiom-collection _z2
+    $spec and-snd : axiom-ext _z2
+  $thm _2 $prove _z2
+    $mp i1 zfc-axioms
+  $thm i2 $prove . -> : _z2 _z3
+    $spec and-snd : axiom-spec _z3
+  $thm _3 $prove _z3
+    $mp i2 _2
+  $thm i3 $prove . -> : _z3 axiom-pairing
+    $spec and-fst : axiom-pairing _z4
+  $mp i3 _3
+
+$thm ax-union $prove axiom-union
+  $def _z8 . and : axiom-replace axiom-choice
+  $def _z7 . and : axiom-regularity _z8
+  $def _z6 . and : axiom-infinity _z7
+  $def _z5 . and : axiom-powerset _z6
+  $def _z4 . and : axiom-union _z5
+  $def _z3 . and : axiom-pairing _z4
+  $def _z2 . and : axiom-spec _z3
+  $thm i1 $prove . -> : zfc-axiom-collection _z2
+    $spec and-snd : axiom-ext _z2
+  $thm _2 $prove _z2
+    $mp i1 zfc-axioms
+  $thm i2 $prove . -> : _z2 _z3
+    $spec and-snd : axiom-spec _z3
+  $thm _3 $prove _z3
+    $mp i2 _2
+  $thm i3 $prove . -> : _z3 _z4
+    $spec and-snd : axiom-pairing _z4
+  $thm _4 $prove _z4
+    $mp i3 _3
+  $thm i4 $prove . -> : _z4 axiom-union
+    $spec and-fst : axiom-union _z5
+  $mp i4 _4
+
+$thm ax-power $prove axiom-powerset
+  $def _z8 . and : axiom-replace axiom-choice
+  $def _z7 . and : axiom-regularity _z8
+  $def _z6 . and : axiom-infinity _z7
+  $def _z5 . and : axiom-powerset _z6
+  $def _z4 . and : axiom-union _z5
+  $def _z3 . and : axiom-pairing _z4
+  $def _z2 . and : axiom-spec _z3
+  $thm i1 $prove . -> : zfc-axiom-collection _z2
+    $spec and-snd : axiom-ext _z2
+  $thm _2 $prove _z2
+    $mp i1 zfc-axioms
+  $thm i2 $prove . -> : _z2 _z3
+    $spec and-snd : axiom-spec _z3
+  $thm _3 $prove _z3
+    $mp i2 _2
+  $thm i3 $prove . -> : _z3 _z4
+    $spec and-snd : axiom-pairing _z4
+  $thm _4 $prove _z4
+    $mp i3 _3
+  $thm i4 $prove . -> : _z4 _z5
+    $spec and-snd : axiom-union _z5
+  $thm _5 $prove _z5
+    $mp i4 _4
+  $thm i5 $prove . -> : _z5 axiom-powerset
+    $spec and-fst : axiom-powerset _z6
+  $mp i5 _5
+
+$thm ax-infty $prove axiom-infinity
+  $def _z8 . and : axiom-replace axiom-choice
+  $def _z7 . and : axiom-regularity _z8
+  $def _z6 . and : axiom-infinity _z7
+  $def _z5 . and : axiom-powerset _z6
+  $def _z4 . and : axiom-union _z5
+  $def _z3 . and : axiom-pairing _z4
+  $def _z2 . and : axiom-spec _z3
+  $thm i1 $prove . -> : zfc-axiom-collection _z2
+    $spec and-snd : axiom-ext _z2
+  $thm _2 $prove _z2
+    $mp i1 zfc-axioms
+  $thm i2 $prove . -> : _z2 _z3
+    $spec and-snd : axiom-spec _z3
+  $thm _3 $prove _z3
+    $mp i2 _2
+  $thm i3 $prove . -> : _z3 _z4
+    $spec and-snd : axiom-pairing _z4
+  $thm _4 $prove _z4
+    $mp i3 _3
+  $thm i4 $prove . -> : _z4 _z5
+    $spec and-snd : axiom-union _z5
+  $thm _5 $prove _z5
+    $mp i4 _4
+  $thm i5 $prove . -> : _z5 _z6
+    $spec and-snd : axiom-powerset _z6
+  $thm _6 $prove _z6
+    $mp i5 _5
+  $thm i6 $prove . -> : _z6 axiom-infinity
+    $spec and-fst : axiom-infinity _z7
+  $mp i6 _6
+
+$thm ax-reg $prove axiom-regularity
+  $def _z8 . and : axiom-replace axiom-choice
+  $def _z7 . and : axiom-regularity _z8
+  $def _z6 . and : axiom-infinity _z7
+  $def _z5 . and : axiom-powerset _z6
+  $def _z4 . and : axiom-union _z5
+  $def _z3 . and : axiom-pairing _z4
+  $def _z2 . and : axiom-spec _z3
+  $thm i1 $prove . -> : zfc-axiom-collection _z2
+    $spec and-snd : axiom-ext _z2
+  $thm _2 $prove _z2
+    $mp i1 zfc-axioms
+  $thm i2 $prove . -> : _z2 _z3
+    $spec and-snd : axiom-spec _z3
+  $thm _3 $prove _z3
+    $mp i2 _2
+  $thm i3 $prove . -> : _z3 _z4
+    $spec and-snd : axiom-pairing _z4
+  $thm _4 $prove _z4
+    $mp i3 _3
+  $thm i4 $prove . -> : _z4 _z5
+    $spec and-snd : axiom-union _z5
+  $thm _5 $prove _z5
+    $mp i4 _4
+  $thm i5 $prove . -> : _z5 _z6
+    $spec and-snd : axiom-powerset _z6
+  $thm _6 $prove _z6
+    $mp i5 _5
+  $thm i6 $prove . -> : _z6 _z7
+    $spec and-snd : axiom-infinity _z7
+  $thm _7 $prove _z7
+    $mp i6 _6
+  $thm i7 $prove . -> : _z7 axiom-regularity
+    $spec and-fst : axiom-regularity _z8
+  $mp i7 _7
+
+$thm ax-replace $prove axiom-replace
+  $def _z8 . and : axiom-replace axiom-choice
+  $def _z7 . and : axiom-regularity _z8
+  $def _z6 . and : axiom-infinity _z7
+  $def _z5 . and : axiom-powerset _z6
+  $def _z4 . and : axiom-union _z5
+  $def _z3 . and : axiom-pairing _z4
+  $def _z2 . and : axiom-spec _z3
+  $thm i1 $prove . -> : zfc-axiom-collection _z2
+    $spec and-snd : axiom-ext _z2
+  $thm _2 $prove _z2
+    $mp i1 zfc-axioms
+  $thm i2 $prove . -> : _z2 _z3
+    $spec and-snd : axiom-spec _z3
+  $thm _3 $prove _z3
+    $mp i2 _2
+  $thm i3 $prove . -> : _z3 _z4
+    $spec and-snd : axiom-pairing _z4
+  $thm _4 $prove _z4
+    $mp i3 _3
+  $thm i4 $prove . -> : _z4 _z5
+    $spec and-snd : axiom-union _z5
+  $thm _5 $prove _z5
+    $mp i4 _4
+  $thm i5 $prove . -> : _z5 _z6
+    $spec and-snd : axiom-powerset _z6
+  $thm _6 $prove _z6
+    $mp i5 _5
+  $thm i6 $prove . -> : _z6 _z7
+    $spec and-snd : axiom-infinity _z7
+  $thm _7 $prove _z7
+    $mp i6 _6
+  $thm i7 $prove . -> : _z7 _z8
+    $spec and-snd : axiom-regularity _z8
+  $thm _8 $prove _z8
+    $mp i7 _7
+  $thm i8 $prove . -> : _z8 axiom-replace
+    $spec and-fst : axiom-replace axiom-choice
+  $mp i8 _8
+
+$thm ax-choice $prove axiom-choice
+  $def _z8 . and : axiom-replace axiom-choice
+  $def _z7 . and : axiom-regularity _z8
+  $def _z6 . and : axiom-infinity _z7
+  $def _z5 . and : axiom-powerset _z6
+  $def _z4 . and : axiom-union _z5
+  $def _z3 . and : axiom-pairing _z4
+  $def _z2 . and : axiom-spec _z3
+  $thm i1 $prove . -> : zfc-axiom-collection _z2
+    $spec and-snd : axiom-ext _z2
+  $thm _2 $prove _z2
+    $mp i1 zfc-axioms
+  $thm i2 $prove . -> : _z2 _z3
+    $spec and-snd : axiom-spec _z3
+  $thm _3 $prove _z3
+    $mp i2 _2
+  $thm i3 $prove . -> : _z3 _z4
+    $spec and-snd : axiom-pairing _z4
+  $thm _4 $prove _z4
+    $mp i3 _3
+  $thm i4 $prove . -> : _z4 _z5
+    $spec and-snd : axiom-union _z5
+  $thm _5 $prove _z5
+    $mp i4 _4
+  $thm i5 $prove . -> : _z5 _z6
+    $spec and-snd : axiom-powerset _z6
+  $thm _6 $prove _z6
+    $mp i5 _5
+  $thm i6 $prove . -> : _z6 _z7
+    $spec and-snd : axiom-infinity _z7
+  $thm _7 $prove _z7
+    $mp i6 _6
+  $thm i7 $prove . -> : _z7 _z8
+    $spec and-snd : axiom-regularity _z8
+  $thm _8 $prove _z8
+    $mp i7 _7
+  $thm i8 $prove . -> : _z8 axiom-choice
+    $spec and-snd : axiom-replace axiom-choice
+  $mp i8 _8
+
+
+## some logic involving forall and exists
+$thm forall-and-1 $prove 
+        . ! pred set \ f1 pred set
+        . ! pred set \ f2 pred set
+        . -> : . ! set f1
+        . -> : . ! set f2
+        . ! set \ x set . and : . f1 x . f2 x
+  $var f1 pred set
+  $var f2 pred set
+  $asm _1 . ! set f1
+  $asm _2 . ! set f2
+  $var x set
+  $thm _3 $prove . f1 x $spec _1 x
+  $thm _4 $prove . f2 x $spec _2 x
+  $thm _5 $prove . and : . f1 x . f2 x
+    $asm _6 . -> : . f1 x . not . f2 x
+    $thm _7 $prove . -> : . f2 x false $mp _6 _3
+    $thm _8 $prove false  $mp _7 _4
+    _8
+  _5
+
+
+$thm forall-ex-2 $prove . ! pred set \ f1 pred set
+        . ! pred set \ f2 pred set
+        . -> : . exists f1
+        . -> : . ! set f2 . exists f2
+  $var f1 pred set
+  $var f2 pred set
+  $asm _1 . exists f1
+  $asm _2 . ! set f2
+  $thm _3 $prove . exists f2
+    $asm _4 . ! set \ x set . not . f2 x
+    $thm _5 $prove . ! set \ x set false
+      $var x set
+      $thm _6 $prove . f2 x $spec _2 x
+      $thm _7 $prove . -> : . f2 x false $spec _4 x
+      $thm _8 $prove false $mp _7 _6
+      _8
+    $def !nf1 . ! set \ x set . not . f1 x
+    $thm _6 $prove !nf1
+      $var x set
+      $thm _7 $prove false $spec _5 x
+      $thm _8 $prove . -> : false . not . f1 x 
+        $spec imp-fx . not . f1 x
+      $mp _8 _7
+    $thm _7 $prove . -> : !nf1 false _1
+    $thm _8 $prove false $mp _7 _6
+    _8
+  _3
+      
+
+$def is_inductive_set \ xx set . and : 
+  . exists \ x set 
+    . and : . in : x xx . isempty x
+  . ! set \ x set
+    . -> : . in : x xx
+    . exists \ y set
+    . and : . in : y xx
+    . ! set \ z set
+    . iff : . in : z y
+    . or : . eq : z x
+    . in : z x
+
+$thm ax-infty' $prove 
+  . exists is_inductive_set
+  ax-infty
+
+$thm forall-ex $prove . ! pred set \ f pred set
+        . -> : . ! set f . exists f
+  $var f pred set
+  $thm _1 $prove . ! pred set \ f2 pred set
+        . -> : . exists is_inductive_set
+        . -> : . ! set f2 . exists f2
+    $spec forall-ex-2 is_inductive_set
+  $thm _2 $prove . -> : . exists is_inductive_set
+        . -> : . ! set f . exists f
+    $spec _1 f
+  $mp _2 ax-infty'
+
+$thm forall-t $prove . ! set \ x set true
+  $var x set ax-t
+
+$thm ex-t $prove . exists \ x set true
+  $def ct \ x set true
+  $thm _1 $prove . ! set ct
+    $var x set ax-t
+  $thm _2 $prove . -> : . ! set ct . exists ct
+    $spec forall-ex ct
+  $mp _2 _1
+
+$thm not-forall-f $prove . not . ! set \ x set false
+  $asm _1 . ! set \ x set false
+  $thm _2 $prove . ! set \ x set . not true
+    $var x set
+    $thm _3 $prove false $spec _1 x
+    $thm _4 $prove . -> : false . not true
+      $spec imp-fx . not true
+    $thm _5 $prove . not true $mp _4 _3
+    _5
+  $thm _3 $prove . -> : . ! set \ x set . not true false
+    ex-t
+  $mp _3 _2
+
+
+$def exists_pair \ f pred pairs set set
+  . not . ! pairs set set \ x pairs set set . not . f x
+
+## from forall-exists to exists-pair
+$thm ae-then-ee $prove
+  . ! pred pairs set set \ f1 pred pairs set set
+  . ! pred set \ f2 pred set
+  . -> : . exists f2
+  . -> : . ! set \ x set
+    . exists \ y set . f1 : x y
+  . exists_pair \ xy pairs set set
+  . and : . f2 fst xy . f1 xy
+  $var f1 pred pairs set set
+  $var f2 pred set
+  $asm _1 . exists f2
+  $asm _2 . ! set \ x set . exists \ y set . f1 : x y
+  $asm _3 . ! pairs set set \ xy pairs set set
+      . not . and : . f2 fst xy . f1 xy
+  $prove false 
+    $thm _4 $prove . ! set \ x set . not . f2 x
+      $var x set
+      $asm _5 . f2 x
+      $thm _6 $prove . -> : 
+          . ! set \ y set . not . f1 : x y
+          false
+        $spec _2 x
+      $thm _7 $prove . ! set \ y set . not . f1 : x y
+        $var y set
+        $asm _8 . f1 : x y
+        $def p1 : . f2 x . f1 : x y
+        $thm _9 $prove . -> : . and p1 false
+          $spec _3 : x y
+        $thm _10 $prove . -> : fst p1 . -> : snd p1 . and p1
+          $spec impimp-and p1
+        $thm _11 $prove . and p1
+          $mp $mp _10 _5 _8
+        $thm _12 $prove false
+          $mp _9 _11
+        _12
+      $prove false $mp _6 _7
+    $thm _5 $prove . -> : . ! set \ x set . not . f2 x false
+      _1
+    $thm _6 $prove false
+      $mp _5 _4
+    _6
+
+
+# equality from both subset relations
+$thm subsub-eq $prove
+    . ! pairs set set \ xy pairs set set 
+    . -> : . subset xy
+    . -> : . subset : snd xy fst xy
+    . eq xy
+  $var xy pairs set set
+  $def x fst xy
+  $def y snd xy
+  $asm _1 . subset : x y
+  $asm _2 . subset : y x
+  $var a set
+  $def ix . in : a x
+  $def iy . in : a y
+  $thm _3 $prove . -> : ix iy
+    $thm _5 $prove 
+        . ! set \ z set . -> : . in : z x . in : z y
+      _1
+    $spec _5 a
+  $thm _4 $prove . -> : iy ix
+    $thm _5 $prove 
+        . ! set \ z set . -> : . in : z y . in : z x
+      _2
+    $spec _5 a
+  $thm _5 $prove 
+        . -> : . -> : ix iy
+        . -> : . -> : iy ix
+        . iff : ix iy
+    $spec impimp-iff : ix iy
+  $mp $mp _5 _3 _4
+
+$thm eq-sym $prove
+      . ! pairs set set \ xy pairs set set
+      . -> : . eq : snd xy fst xy . eq xy
+  $var xy pairs set set
+  $def x fst xy
+  $def y snd xy
+  $asm _1 . eq : y x
+  $var a set
+  $def iy . in : a y
+  $def ix . in : a x
+  $thm _2 $prove . ! set \ z set . iff : . in : z y . in : z x 
+    _1
+  $thm _3 $prove . iff : iy ix
+    $spec _2 a
+  $thm _4 $prove . -> : . iff : iy ix . iff : ix iy  
+    $spec iff-sym : ix iy
+  $mp _4 _3
+
+# $thm eq-trans $prove
+
+  
+# existence of the empty set
+$thm ex-empty-2 $prove . exists isempty
+  $asm _1 . ! set \ x set . not . isempty x
+  $def cf \ x set false
+  $def ct \ x set true
+  $thm ax-spec2 $prove
+      . ! set \ x set . exists \ y set
+      . ! set \ z set . iff :
+      . in : z y . and : . in : z x . cf z
+    $thm _2 $spec ax-spec cf
+    _2
+  $thm _2 $prove . ! set cf
+    $var x set
+    $def alt-empty \ y set
+        . ! set \ z set . iff :
+        . in : z y . and : . in : z x . cf z
+    $thm _3 $prove . exists alt-empty $spec ax-spec2 x
+    $thm _4 $prove . ! set \ y set . not . alt-empty y
+      $var y set
+      $asm _5 . alt-empty y
+      $thm _6 $prove . not . isempty y $spec _1 y
+      $thm _7 $prove . exists \ z set . in : z y
+        _6 # elegant matching!
+      $def ae-iff \ z set . iff :
+          . in : z y . and : . in : z x . cf z
+      $thm _8 $prove . ! set ae-iff _5
+      $thm _9 $prove . ! set \ z set . -> : . in : z y false
+        $var z set
+        $asm _10 . in : z y
+        $def a1 . and : . in : z x . cf z
+        $def p1 : . in : z y a1
+        $thm _11 $prove . iff p1 $spec _8 z
+        $thm _12 $prove . -> : . iff p1 . -> p1
+          $spec iff-imp p1
+        $thm _13 $prove . -> : . in : z y a1 $mp _12 _11
+        $thm _14 $prove a1 $mp _13 _10
+        $def p2 : . in : z x . cf z
+        $thm _15 $prove . -> : . and p2 snd p2
+          $spec and-snd p2
+        $thm _16 $prove snd p2
+          $mp _15 _14
+        $thm _17 $prove false _16
+        _17
+      $thm _10 $prove . -> : 
+            . ! set \ z set . not . in : z y false
+        _6
+      $thm _11 $prove false $mp _10 _9
+      _11
+    $thm _5 $prove . -> : 
+          . ! set \ y set . not . alt-empty y false
+      _3
+    $thm _6 $prove false $mp _5 _4
+    _6
+  $thm _3 $prove . -> : . ! set cf false not-forall-f
+  $thm _4 $prove false $mp _3 _2
+  _4
+      
+# the empty set is unique
+$thm empty-uniq $prove
+      . ! pairs set set \ xy pairs set set
+      . -> : . and : . isempty fst xy . isempty snd xy
+      . eq xy
+  $var xy pairs set set
+  $def x fst xy
+  $def y snd xy
+  $def p1 : . isempty x . isempty y
+  $asm _1 . and p1
+  $thm _2 $prove . -> : . and p1 fst p1
+    $spec and-fst p1
+  $thm _3 $prove . -> : . and p1 snd p1
+    $spec and-snd p1
+  $thm _4 $prove . ! set \ z set . not . in : z x $mp _2 _1
+  $thm _5 $prove . ! set \ z set . not . in : z y $mp _3 _1
+  $thm _6 $prove . eq xy
+    $var z set
+    $thm _7 $prove . not . in : z x $spec _4 z
+    $thm _8 $prove . not . in : z y $spec _5 z
+    $def p2 : . in : z x . in : z y
+    $thm _9 $prove . -> : . not fst p2 . -> : . not snd p2
+            . iff p2
+      $spec imp-nxny-iff-xy p2
+    $thm _10 $prove . iff p2
+      $mp $mp _9 _7 _8
+    _10
+  _6
+    
+
+## important theorem: the empty set exists
+$thm exists-emptyset $prove . exists_uniq isempty
+  $def a1 . exists isempty
+  $def a2 . ! pairs set set \ xy pairs set set
+      . -> : . and : . isempty fst xy . isempty snd xy
+      . eq xy
+  $thm _1 $prove a1 ex-empty-2
+  $thm _2 $prove a2 empty-uniq
+  $def p1 : a1 a2
+  $thm _3 $prove . -> : a1 . -> : a2 . and p1
+    $spec impimp-and p1
+  $thm _4 $prove . and p1 $mp $mp _3 _1 _2
+  _4
+
+
+# if x is included in all sets that satisfy f
+$def lower-bound \ fx pairs pred set set
+  . ! set \ y set
+  . -> : . fst fx y . subset : snd fx y
+
+# intersection of sets that satisfy a predicate
+$def cap-over-pred \ fx pairs pred set set
+  . and : . lower-bound fx
+  . ! set \ z set
+  . -> : . lower-bound : fst fx z
+  . subset : z snd fx
+
+
+# for f, x, there exists a unique set y = {z\in x : f z }
+$thm spec-uniq $prove
+      . ! pred set \ f pred set
+      . ! set \ x set . exists_uniq \ y set
+      . ! set \ z set . iff :
+      . in : z y
+      . and : . in : z x . f z
+  $var f pred set
+  $def f2 \ x set . exists \ y set
+      . ! set \ z set . iff :
+      . in : z y . and : . in : z x . f z
+  $var x set
+  $def f3 \ y set
+      . ! set \ z set . iff :
+      . in : z y . and : . in : z x . f z
+  $thm existence $prove . exists f3
+    $thm _1 $prove . ! set f2
+      $spec ax-spec f
+    $thm _2 $prove . exists f3
+      $spec _1 x
+    _2
+  $def uniq_expr
+        . ! pairs set set \ vw pairs set set
+        . -> : . and : . f3 fst vw . f3 snd vw
+        . eq vw
+  $thm uniqueness $prove uniq_expr
+    $var vw pairs set set
+    $def v fst vw
+    $def w snd vw
+    $def p1 : . f3 v . f3 w
+    $asm _1 . and p1
+    $thm _2 $prove . -> : . and p1 . f3 v
+      $spec and-fst p1
+    $thm _3 $prove . -> : . and p1 . f3 w
+      $spec and-snd p1
+    $thm _4 $prove . f3 v
+      $mp _2 _1
+    $thm _5 $prove . f3 w
+      $mp _3 _1
+    $thm _6 $prove . eq vw
+      $def f4v \ z set . iff :
+        . in : z v . and : . in : z x . f z
+      $def f4w \ z set . iff :
+        . in : z w . and : . in : z x . f z
+      $thm _7 $prove . ! set f4v _4
+      $thm _8 $prove . ! set f4w _5
+      $var z set
+      $thm _9 $prove . f4v z $spec _7 z
+      $thm _10 $prove . f4w z $spec _8 z
+      $def ziff . iff : . in : z v . in : z w
+      $thm _11 $prove . -> : . f4v z . -> : . f4w z ziff
+        $spec iff-trans-2 : : . in : z v . in : z w
+          . and : . in : z x . f z
+      $thm _12 $prove ziff
+        $mp $mp _11 _9 _10
+      _12
+    _6
+  $thm _1 $prove . -> : . exists f3 . -> : uniq_expr
+          . and : . exists f3 uniq_expr
+    $spec impimp-and : . exists f3 uniq_expr
+  $thm _2 $prove . exists_uniq f3 
+    $mp $mp _1 existence uniqueness
+  _2
+
+
+# there exists x such that cap-over-pred : f x
+$thm exists-cap-over-pred $prove 
+      . ! pred set \ f pred set
+      . -> : . exists f
+      . exists_uniq \ x set . cap-over-pred : f x
+  $var f pred set
+  $asm _1 . exists f
+  $thm _existence $prove . exists \ x set . cap-over-pred : f x
+    $asm _2 . ! set \ x set . not . cap-over-pred : f x
+    $thm _3 $prove . ! set \ x set . not . f x
+      $var x set
+      $asm _4 . f x
+      $def cand_prop \ z set 
+          . ! set \ w set
+          . -> : . f w . in : z w
+      $def y_prop \ y set # y is the set that
+          . ! set \ z set . iff : 
+          . in : z y
+          . and : . in : z x . cand_prop z
+      $thm _5 $prove . exists y_prop
+        $thm _6 $prove
+            . ! set \ x2 set . exists \ y set
+            . ! set \ z set . iff :
+            . in : z y
+            . and : . in : z x2 . cand_prop z
+          $spec ax-spec cand_prop
+        $spec _6 x
+      $thm _6 $prove . ! set \ y set . not . y_prop y
+        $var y set
+        $asm _7 . y_prop y
+        $thm _9 $prove . lower-bound : f y
+          $var z set
+          $asm _10 . f z
+          $thm subyz $prove . subset : y z
+            $var a set
+            $asm _11 . in : a y
+            $thm _12 $prove . ! set \ z2 set . iff : 
+                . in : z2 y
+                . and : . in : z2 x . cand_prop z2
+              _7
+            $def b1 . and : . in : a x . cand_prop a
+            $def p1 : . in : a y b1
+            $thm _13 $prove . iff p1
+              $spec _12 a
+            $thm _14 $prove . -> : . iff p1 . -> p1
+              $spec iff-imp p1
+            $thm _15 $prove . -> : . in : a y b1
+              $mp _14 _13
+            $thm _16 $prove . and : . in : a x . cand_prop a
+              $mp _15 _11
+            $def b2 . in : a x
+            $def b3 . cand_prop a
+            $thm _17 $prove . -> : . and : b2 b3 b3
+              $spec and-snd : b2 b3
+            $thm _18 $prove b3 $mp _17 _16
+            $thm _19 $prove . ! set \ v set
+                . -> : . f v . in : a v
+              _18
+            $thm _20 $prove . -> : . f z . in : a z
+              $spec _19 z
+            $thm _21 $prove . in : a z
+              $mp _20 _10
+            _21
+          subyz
+        $thm _10 $prove . ! set \ z set
+            . -> : . lower-bound : f z
+            . subset : z y
+          $var z set
+          $asm _11 . lower-bound : f z
+          $var a set
+          $asm _12 . in : a z
+          $thm _13 $prove . subset : z x
+            $def h1 \ z2 set . -> : . f z2 . subset : z z2
+            $thm _14 $prove . ! set h1 _11
+            $thm _15 $prove . -> : . f x . subset : z x 
+              $spec _14 x
+            $mp _15 _4
+          $thm _14 $prove . in : a x
+            $def h1 \ z2 set . -> : . in : z2 z . in : z2 x
+            $thm _15 $prove . ! set h1 _13
+            $thm _16 $prove . -> : . in : a z . in : a x
+              $spec _15 a
+            $mp _16 _12
+          $thm _15 $prove . cand_prop a
+            $var w set
+            $asm _16 . f w
+            $def h1 \ y2 set . -> : . f y2 . subset : z y2
+            $thm _17 $prove . ! set h1 _11
+            $thm _18 $prove . -> : . f w . subset : z w
+              $spec _17 w
+            $thm _19 $prove . subset : z w $mp _18 _16
+            $thm _20 $prove . in : a w
+              $def h2 \ z2 set . -> : . in : z2 z . in : z2 w
+              $thm _21 $prove . ! set h2 _19
+              $thm _22 $prove . -> : . in : a z . in : a w
+                $spec _21 a
+              $mp _22 _12
+            _20
+          $def h3 . in : a x
+          $def h4 . cand_prop a
+          $thm _16 $prove . -> : h3 . -> : h4 . and : h3 h4
+            $spec impimp-and : h3 h4
+          $def h5 . and : h3 h4
+          $def h6 . in : a y
+          $thm _17 $prove h5
+            $mp $mp _16 _14 _15
+          $thm _18 $prove . ! set \ z2 set
+              . iff : . in : z2 y 
+              . and : . in : z2 x . cand_prop z2
+            _7
+          $thm _19 $prove . iff : h6 h5
+            $spec _18 a
+          $thm _20 $prove . -> : . iff : h6 h5 . -> : h5 h6
+            $spec iff-imp-2 : h6 h5
+          $thm _21 $prove h6
+            $mp $mp _20 _19 _17
+          _21
+        $thm _11 $prove . cap-over-pred : f y
+          $def h1 . lower-bound : f y
+          $thm _12 $prove h1 _9
+          $def h2 . ! set \ z set
+            . -> : . lower-bound : f z . subset : z y
+          $thm _13 $prove h2 _10
+          $thm _14 $prove . -> : h1 . -> : h2 . and : h1 h2
+            $spec impimp-and : h1 h2
+          $thm _15 $prove . and : h1 h2
+            $mp $mp _14 _12 _13
+          _15
+        $thm _12 $prove . -> : . cap-over-pred : f y false
+          $spec _2 y
+        $thm _13 $prove false $mp _12 _11
+        _13
+
+      $def h1 \ y2 set . not . y_prop y2
+      $thm _7 $prove . -> : . ! set h1 false _5
+      $thm _8 $prove false $mp _7 _6
+      _8 # end of $thm _3
+    $def h1 \ y2 set . not . f y2
+    $thm _4 $prove . -> : . ! set h1 false
+      _1
+    $mp _4 _3
+  $def i2 . ! pairs set set \ xy pairs set set
+        . -> : . and : . cap-over-pred : f fst xy
+                 . cap-over-pred : f snd xy
+        . eq xy
+  $thm _uniq $prove i2
+    $var xy pairs set set
+    $def x fst xy
+    $def y snd xy
+    $def cx . cap-over-pred : f x
+    $def cy . cap-over-pred : f y
+    $def h1x \ z set . -> : . lower-bound : f z . subset : z x
+    $def h1y \ z set . -> : . lower-bound : f z . subset : z y
+    $asm _2 . and : cx cy
+    $thm _cx $prove cx
+      $thm _3 $prove . -> : . and : cx cy cx 
+        $spec and-fst : cx cy
+      $mp _3 _2
+    $thm _cy $prove cy
+      $thm _3 $prove . -> : . and : cx cy cy 
+        $spec and-snd : cx cy
+      $mp _3 _2
+    $thm _3 $prove . lower-bound : f x
+      $thm _4 $prove . and : . lower-bound : f x . ! set h1x
+        _cx
+      $thm _5 $prove . -> : cx . lower-bound : f x
+        $spec and-fst : . lower-bound : f x . ! set h1x
+      $mp _5 _4
+    $thm _4 $prove . lower-bound : f y
+      $thm _5 $prove . and : . lower-bound : f y . ! set h1y
+        _cy
+      $thm _6 $prove . -> : cy . lower-bound : f y
+        $spec and-fst : . lower-bound : f y . ! set h1y
+      $mp _6 _5
+    $thm _5 $prove . ! set h1x
+      $thm _6 $prove . and : . lower-bound : f x . ! set h1x
+        _cx
+      $thm _7 $prove . -> : cx . ! set h1x
+        $spec and-snd : . lower-bound : f x . ! set h1x
+      $mp _7 _6
+    $thm _6 $prove . ! set h1y
+      $thm _7 $prove . and : . lower-bound : f y . ! set h1y
+        _cy
+      $thm _8 $prove . -> : cy . ! set h1y
+        $spec and-snd : . lower-bound : f y . ! set h1y
+      $mp _8 _7
+    $thm _7 $prove . -> : . lower-bound : f y . subset : y x
+      $spec _5 y
+    $thm _8 $prove . -> : . lower-bound : f x . subset : x y
+      $spec _6 x
+    $thm _9 $prove . subset : x y $mp _8 _3
+    $thm _10 $prove . subset : y x $mp _7 _4
+    $thm _11 $prove . -> : . subset : x y 
+        . -> : . subset : y x . eq : x y
+      $spec subsub-eq : x y
+    $thm _12 $prove . eq xy
+      $mp $mp _11 _9 _10
+    _12
+      # show . eq xy
+  $def i1 . exists \ x set . cap-over-pred : f x
+  $thm _3 $prove . -> : i1 . -> : i2 . and : i1 i2
+    $spec impimp-and : i1 i2
+  $mp $mp _3 _existence _uniq
+
+# define the omega ordinal, or natural numbers
+$def is_omega \ x set . cap-over-pred : is_inductive_set x
+
+# unique existence of omega
+$thm exists-omega $prove . exists_uniq is_omega
+  $thm _1 $prove . -> : . exists is_inductive_set
+        . exists_uniq is_omega
+    $spec exists-cap-over-pred is_inductive_set
+  $mp _1 ax-infty
+
+# define the union function
+$def union \ xyz pairs pairs set set set
+    . ! set \ z set
+    . iff : . in : z snd xyz
+    . or : . in : z fst fst xyz
+    . in : z snd fst xyz
+
+
+# whether a relation describes a function from set to set
+$def isfun \ f pred pairs set set
+  . ! set \ x set
+  . exists_uniq \ y set
+  . f : x y
+
+# whether a relation describes an operator from `pairs set set` to `set`
+$def isoperator \ f pred pairs pairs set set set
+    . ! pairs set set \ xy pairs set set
+    . exists_uniq \ z set
+    . f : xy z
+
+$thm tmp2
+
+# goal:
+# $thm isop-union $prove . isoperator union
+  $var xy pairs set set
+  $def x fst xy
+  $def y snd xy
+#   $thm _ex $prove exists \ z set . union : xy z
+    
+    
+    
+
+
+end-scope
+
+# define the successor function
+$def succ \ xy pairs set set
+    . ! set \ z set
+    . iff : . in : z snd xy
+    . or : . eq : z fst xy
+    . in : z fst xy
+
+
+$thm tmp3
+
+# goal: 
+# $thm isfun-succ $prove . isfun succ
+#   $var x set
+#   $thm _ex $prove . exists \ y set . succ : x y
+#     $asm _1 . ! set \ y set . not . succ : x y
+
+
+    # show false
+
+  # show exists_uniq \ y set . succ : x y
+
+end-scope
+
+# goal: peano axioms
+
+$thm other # for scoping
+
+#$def forall ! set
+
+$thm mp'
+  $var p bool
+  $var q bool
+  $asm min p
+  $asm maj . -> : p q
+  $prove q $mp maj min
+
+$thm spec'
+  $var f pred set
+  $var x set
+  $asm ff . ! set \ y set . f y
+  $thm ff2 $prove . ! set \ y set . f y ff
+  $prove . f x $spec ff2 x
+
+
+
+
+# $def isfun2 \ f pred pairs set set
+#   . ! set \ x set . exists \ y set
+#   . and : . f : x y
+#   . ! set \ z set . -> : . f : x z . eq : y z
+
+end-scope
+
+
+# $print the-end
+
+end-scope
+

@@ -1,0 +1,172 @@
+#### start preamble
+
+# the following is already hardcoded:
+# $var -> pred pairs bool bool
+
+# we defined some very important variables
+$var true bool
+$var false bool
+$var in pred pairs set set
+
+## some boolean logic:
+
+# axiom: true is always true
+$asm axiom-true true
+
+# axiom that bool functions only need to be shown for true, false
+$asm axiom-forall-bool . ! pred bool \ f pred bool
+                 . -> : . f false
+                 . -> : . f true
+                 . ! bool f
+
+# we define some logical functions
+$def not \ x bool . -> : x false
+$def and \ x pairs bool bool . not . -> : fst x . not snd x
+$def or \ x pairs bool bool . -> : . not fst x snd x
+$def iff \ x pairs bool bool . and : . -> x . -> : snd x fst x
+
+# some useful definitions:
+
+# define existence for sets
+$def exists \ f pred set
+  . not . ! set \ x set . not . f x
+
+# define set equality
+$def eq \ xy pairs set set
+    . ! set \ z set
+    . iff : . in : z fst xy 
+    . in : z snd xy
+
+# define subset
+$def subset \ xy pairs set set
+  . ! set \ z set
+  . -> : . in : z fst xy 
+  . in : z snd xy
+
+# define property of empty set
+$def isempty \ x set
+  . ! set \ y set
+  . not . in : y x
+
+$def nonempty \ x set
+  . not . isempty x
+
+# define disjoint
+$def disjoint \ x pairs set set
+  . ! set \ y set
+  . -> : . and :
+    . subset : y fst x
+    . subset : y snd x
+  . isempty y
+
+# define unique existence
+$def exists_uniq \ f pred set
+  . and : . exists f
+  . ! pairs set set \ xy pairs set set
+  . -> : . and : . f fst xy . f snd xy
+  . eq xy
+
+
+# list of ZFC axioms
+
+# axiom of extensionality
+$def axiom-ext . ! pairs set set \ xy pairs set set 
+  . -> : . eq xy
+  . ! set \ z set . iff : 
+  . in : fst xy z
+  . in : snd xy z
+
+# axiom schema of specification
+$def axiom-spec . ! pred set \ f pred set
+  . ! set \ x set . exists \ y set
+  . ! set \ z set . iff :
+  . in : z y
+  . and : . in : z x . f z
+
+# axiom of pairing
+$def axiom-pairing . ! pairs set set \ xy pairs set set
+  . exists \ z set
+  . and : . in : z fst xy
+  . in : z snd xy
+
+# axiom of union
+$def axiom-union . ! set \ xx set
+  . exists \ u set
+  . ! pairs set set \ xy pairs set set
+  . -> : . and : . in xy . in : snd xy xx
+  . in : fst xy u
+
+# axiom of power set
+$def axiom-powerset . ! set \ x set
+  . exists \ p set
+  . ! set \ y set
+  . -> : . subset : y x
+  . in : y p
+
+# axiom of infinity
+$def axiom-infinity . exists \ xx set . and : 
+  . exists \ x set 
+    . and : . in : x xx . isempty x
+  . ! set \ x set
+    . -> : . in : x xx
+    . exists \ y set
+    . and : . in : y xx
+    . ! set \ z set
+    . iff : . in : z y
+    . or : . eq : z x
+    . in : z x
+#     . and : . in : x y
+#     . subset : x y
+
+# axiom of regularity
+$def axiom-regularity . ! set \ x set
+  . or : . isempty x
+  . exists \ y set
+  . and : . in : y x
+  . disjoint : y x
+
+# axiom of replacement
+$def axiom-replace . ! set \ a set 
+  . ! pred pairs set set \ f pred pairs set set
+  . -> : . ! set \ x set
+    . -> : . in : x a
+    . exists_uniq \ y set . f : x y # f is a function
+  . exists \ b set . ! set \ x set # b is a superset of image
+  . -> : . in : x a
+  . exists \ y set 
+  . and : . in : y b . f : x y
+
+# axiom of choice: every collection of disjoint nonempty sets
+# has a choice set
+$def axiom-choice . ! set \ a set
+  . -> : 
+    . and : . nonempty a
+      . and : . ! set \ b set
+        . -> : . in : b a . nonempty b
+      . ! pairs set set \ xy pairs set set
+        . -> : . and : 
+          . not . eq xy 
+          . and : . in : fst xy a
+          . in : snd xy a
+        . disjoint xy
+  . exists \ d set . ! set \ b set # d is the choice set
+    . -> : . in : b a
+    . exists_uniq \ c set
+    . and : . in : c b
+    . in : c d
+
+# collect the axioms as zfc
+$def zfc-axiom-collection . and : axiom-ext
+  . and : axiom-spec
+  . and : axiom-pairing
+  . and : axiom-union
+  . and : axiom-powerset
+  . and : axiom-infinity
+  . and : axiom-regularity
+  . and : axiom-replace
+  axiom-choice
+  
+## main assumption:
+$asm zfc-axioms zfc-axiom-collection
+
+### end preamble
